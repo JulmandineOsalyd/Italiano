@@ -1,0 +1,62 @@
+import React, { useState, useEffect } from 'react';
+import { BookOpen, Heart, Users, Sparkles, CheckCircle2, ChevronRight, ChevronLeft, Award, RotateCcw, Home, MessageCircle } from 'lucide-react';
+
+export default function ItalianLearningApp() {
+  const [currentView, setCurrentView] = useState('home');
+  const [currentModule, setCurrentModule] = useState(null);
+  const [currentLesson, setCurrentLesson] = useState(0);
+  const [progress, setProgress] = useState({});
+  const [exerciseAnswers, setExerciseAnswers] = useState({});
+  const [showAnswer, setShowAnswer] = useState({});
+
+  // Charger la progression depuis localStorage au démarrage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('italian-app-progress');
+      if (saved) {
+        setProgress(JSON.parse(saved));
+      }
+    } catch (e) {
+      console.error('Erreur chargement:', e);
+    }
+  }, []);
+
+  // Sauvegarder dans localStorage
+  const saveProgress = (newProgress) => {
+    setProgress(newProgress);
+    try {
+      localStorage.setItem('italian-app-progress', JSON.stringify(newProgress));
+    } catch (e) {
+      console.error('Erreur sauvegarde:', e);
+    }
+  };
+
+  const markLessonComplete = (moduleId, lessonId) => {
+    const newProgress = { ...progress };
+    if (!newProgress[moduleId]) newProgress[moduleId] = {};
+    newProgress[moduleId][lessonId] = {
+      completed: true,
+      lastReviewed: new Date().toISOString(),
+      reviewCount: (newProgress[moduleId][lessonId]?.reviewCount || 0) + 1
+    };
+    saveProgress(newProgress);
+  };
+
+  const getModuleProgress = (moduleId, totalLessons) => {
+    if (!progress[moduleId]) return 0;
+    const completed = Object.values(progress[moduleId]).filter(l => l.completed).length;
+    return Math.round((completed / totalLessons) * 100);
+  };
+
+  // ============ DONNÉES PÉDAGOGIQUES ============
+  // (Copie ici TOUT le contenu de la constante "modules" de l'artifact précédent —
+  // de "const modules = {" jusqu'à la fermeture "};", inchangé)
+
+  // ============ CONTENUS VISUELS ============
+  // (Copie ici la fonction renderVisualContent COMPLÈTE, inchangée)
+
+  // ============ UI ============
+  // (Copie ici tout le reste : totalLessons, completedLessons, getReviewsNeeded,
+  // la VUE ACCUEIL, et la VUE LEÇON — inchangés, SAUF la ligne "if (loading)"
+  // que tu peux supprimer puisqu'on n'a plus de loading state)
+}
