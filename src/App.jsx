@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BookOpen, Heart, Users, Sparkles, CheckCircle2, ChevronRight, ChevronLeft, Award, RotateCcw, Home, MessageCircle } from 'lucide-react';
+import { supabase } from './supabase';
 
 export default function App() {
   const [currentView, setCurrentView] = useState('home');
@@ -10,34 +11,45 @@ export default function App() {
   const [showAnswer, setShowAnswer] = useState({});
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('italian-app-progress');
-      if (saved) {
-        setProgress(JSON.parse(saved));
-      }
-    } catch (e) {
-      console.error('Erreur chargement:', e);
-    }
+    const loadProgress = async () => {
+      const { data, error } = await supabase.from('progress').select('*');
+      if (error) { console.error('Erreur chargement:', error); return; }
+      const formatted = {};
+      data.forEach(row => {
+        if (!formatted[row.module_id]) formatted[row.module_id] = {};
+        formatted[row.module_id][row.lesson_id] = {
+          completed: row.completed,
+          lastReviewed: row.last_reviewed,
+          reviewCount: row.review_count
+        };
+      });
+      setProgress(formatted);
+    };
+    loadProgress();
   }, []);
 
-  const saveProgress = (newProgress) => {
-    setProgress(newProgress);
-    try {
-      localStorage.setItem('italian-app-progress', JSON.stringify(newProgress));
-    } catch (e) {
-      console.error('Erreur sauvegarde:', e);
-    }
-  };
+  const markLessonComplete = async (moduleId, lessonId) => {
+    const current = progress[moduleId]?.[lessonId];
+    const reviewCount = (current?.reviewCount || 0) + 1;
+    const lastReviewed = new Date().toISOString();
 
-  const markLessonComplete = (moduleId, lessonId) => {
-    const newProgress = { ...progress };
-    if (!newProgress[moduleId]) newProgress[moduleId] = {};
-    newProgress[moduleId][lessonId] = {
+    const { error } = await supabase.from('progress').upsert({
+      module_id: moduleId,
+      lesson_id: lessonId,
       completed: true,
-      lastReviewed: new Date().toISOString(),
-      reviewCount: (newProgress[moduleId][lessonId]?.reviewCount || 0) + 1
-    };
-    saveProgress(newProgress);
+      last_reviewed: lastReviewed,
+      review_count: reviewCount
+    }, { onConflict: 'module_id,lesson_id' });
+
+    if (error) { console.error('Erreur sauvegarde:', error); return; }
+
+    setProgress(prev => ({
+      ...prev,
+      [moduleId]: {
+        ...prev[moduleId],
+        [lessonId]: { completed: true, lastReviewed, reviewCount }
+      }
+    }));
   };
 
   const getModuleProgress = (moduleId, totalLessons) => {
